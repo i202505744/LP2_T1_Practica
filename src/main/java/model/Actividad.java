@@ -41,4 +41,9 @@ public class Actividad {
 	
 	@Column(name = "nro_vacantes")
 	private Integer nroVacantes;
+	
+	@Override
+	public String toString() {
+		return descripcion;
+	}
 }

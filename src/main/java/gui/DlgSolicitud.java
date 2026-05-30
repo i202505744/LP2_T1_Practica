@@ -3,7 +3,10 @@ package gui;
 import java.awt.EventQueue;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.time.LocalDate;
+import java.util.List;
 
+import javax.persistence.EntityManager;
 import javax.swing.JButton;
 import javax.swing.JComboBox;
 import javax.swing.JDialog;
@@ -11,6 +14,12 @@ import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JScrollPane;
 import javax.swing.JTextField;
+
+import model.Actividad;
+import model.Categoria;
+import model.Solicitud;
+import util.JPAUtil;
+
 import javax.swing.JTextArea;
 import java.awt.Font;
 
@@ -40,7 +49,7 @@ public class DlgSolicitud extends JDialog implements ActionListener {
 	private JScrollPane scrollPane;
 	private JTextArea txtSalida;
 
-	// Tipo de operación a procesar: Adicionar, Consultar, Modificar o Eliminar
+	// Tipo de operaciï¿½n a procesar: Adicionar, Consultar, Modificar o Eliminar
 	private int tipoOperacion;
 
 	// Constantes para los tipos de operaciones
@@ -244,30 +253,149 @@ public class DlgSolicitud extends JDialog implements ActionListener {
 	}
 
 	void cargarActividades() {
-
+		EntityManager manager = JPAUtil.getEntityManager();
+		String jpql = "select a from Actividad a";
+		
+		try {
+			List<Actividad> lstActividades = manager.createQuery(jpql, Actividad.class).getResultList();
+			
+			for (Actividad actividad : lstActividades) {
+				cboActividad.addItem(actividad);
+			}
+			
+		} finally {
+			manager.close();
+		}
 	}
 
 	void listar() {
+		EntityManager manager = JPAUtil.getEntityManager();
+		String jpql = "select s from Solicitud s";
+		
+		try {
+			List<Solicitud> lstSolicitudes = manager.createQuery(jpql, Solicitud.class).getResultList();
+			
+			for (Solicitud solicitud : lstSolicitudes) {
+				Actividad actividad = solicitud.getActividad();
+				Categoria categoria = actividad.getCategoria();
 
+				imprimir("Nro. Solicitud....: " + solicitud.getNroSolicitud());
+				imprimir("Fecha de registro.: " + solicitud.getFechaReg());
+				imprimir("Actividad.........: " + actividad.getDescripcion());
+				imprimir("Fecha de inicio...: " + actividad.getFechaInicio());
+				imprimir("Nro de vacantes...: " + actividad.getNroVacantes());
+				imprimir("Categoria.........: " + categoria.getDescripcion());
+				imprimir("Archivo adjunto...: " + solicitud.getArchivoAdjunto());
+				imprimir("Estado............: " + solicitud.getEstadoDescripcion());
+				imprimir("-------------------------------------\n");
+			}
+		} finally {
+			manager.close();
+		}
 	}
 
 	void adicionar() {
-
+		String archivoAdjunto = txtArchivoAdjunto.getText();
+		Actividad actividad = (Actividad) cboActividad.getSelectedItem();
+		String estado = cboEstado.getSelectedItem().toString();
+		
+		EntityManager manager = JPAUtil.getEntityManager();
+		
+		try {
+			Solicitud solicitud = new Solicitud(null, actividad, estado, archivoAdjunto, null);
+			
+			manager.getTransaction().begin();
+			manager.persist(solicitud);
+			manager.getTransaction().commit();
+			
+			mensajeInfo("Solicitud registrada");
+			limpiar();
+			
+		} catch (Exception e) {
+			mensajeError("Hubo un error en la transacciÃ³n");
+			e.printStackTrace();
+		} finally {
+			manager.close();
+		}
 	}
 	
 	void buscar() {
-
+		Integer nroSolicitud = Integer.parseInt(txtIdSolicitud.getText());
+		EntityManager manager = JPAUtil.getEntityManager();
+		
+		try {
+			Solicitud solicitud = manager.find(Solicitud.class, nroSolicitud);
+			
+			if (solicitud == null) {
+				mensajeError("Orden de soporte no encontrada");
+				return;
+			}
+			
+			txtArchivoAdjunto.setText(solicitud.getArchivoAdjunto());
+			cboActividad.setSelectedItem(solicitud.getActividad());
+			cboEstado.setSelectedItem(solicitud.getEstado());
+			txtFechaRegistro.setText(solicitud.getFechaReg()+"");
+			
+			habilitarOk();
+		} finally {
+			manager.close();
+		}
 	}
 
 	void modificar() {
+		Integer nroSolicitud = Integer.parseInt(txtIdSolicitud.getText());
+		String archivoAdjunto = txtArchivoAdjunto.getText();
+		Actividad actividad = (Actividad) cboActividad.getSelectedItem();
+		String estado = cboEstado.getSelectedItem().toString();
+		LocalDate fechaRegistro = LocalDate.parse(txtFechaRegistro.getText()); 
 
+		EntityManager manager = JPAUtil.getEntityManager();
+		
+		try {
+			Solicitud solicitud = new Solicitud(nroSolicitud, actividad, estado, archivoAdjunto, fechaRegistro);
+			
+			manager.getTransaction().begin();
+			manager.merge(solicitud);
+			manager.getTransaction().commit();
+			
+			mensajeInfo("Solicitud actualizada");
+			limpiar();
+			
+		} catch (Exception e) {
+			mensajeError("Hubo un error en la transacciÃ³n");
+			e.printStackTrace();
+		} finally {
+			manager.close();
+		}
 	}
 
 	void eliminar() {
-
+		Integer nroSolicitud = Integer.parseInt(txtIdSolicitud.getText());
+		EntityManager manager = JPAUtil.getEntityManager();
+		
+		try {
+			Solicitud solicitud = manager.find(Solicitud.class, nroSolicitud);
+			
+			if (solicitud == null) {
+				mensajeError("Orden de soporte no encontrada");
+				return;
+			}
+			
+			manager.getTransaction().begin();
+			manager.remove(solicitud);
+			manager.getTransaction().commit();
+			
+			mensajeInfo("Solicitud eliminada");
+			limpiar();
+		} catch (Exception e) {
+			mensajeError("Hubo un error en la transacciÃ³n");
+			e.printStackTrace();
+		} finally {
+			manager.close();
+		}
 	}
 
-	// Métodos tipo void (con parámetros)
+	// Mï¿½todos tipo void (con parï¿½metros)
 	void habilitarEntradas(boolean sino) {
 		txtArchivoAdjunto.setEditable(sino);
 		cboActividad.setEnabled(sino);

@@ -15,7 +15,6 @@ import javax.persistence.Table;
 import org.hibernate.annotations.DynamicInsert;
 
 import lombok.AllArgsConstructor;
-import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -27,13 +26,11 @@ import lombok.Setter;
 @DynamicInsert
 @AllArgsConstructor
 @NoArgsConstructor
-@EqualsAndHashCode(onlyExplicitlyIncluded = true)
 public class Solicitud {
 	
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	@Column(name = "nro_solicitud")
-	@EqualsAndHashCode.Include
 	private Integer nroSolicitud;
 
 	@ManyToOne(fetch = FetchType.LAZY)
@@ -48,4 +45,17 @@ public class Solicitud {
 	
 	@Column(name = "fecha_reg")
 	private LocalDate fechaReg;
+	
+	public String getEstadoDescripcion() {
+		switch (estado) {
+		case "PE":
+			return "Pendiente";
+		case "AC":
+			return "Activo";
+		case "AN":
+			return "Anulado";
+		default:
+			return "Desconocido";
+		}
+	}
 }
